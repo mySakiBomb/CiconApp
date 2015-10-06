@@ -1,7 +1,9 @@
 /*
 *   sakiBomb            15Sep24    Created RenamePartsMain
 *   sakiBomb-01         15Oct04    rename pics without timestamp
-*
+*   sakiBomb-02         15Oct05    Replace ZXing barcode reader with QR droid barcode reader
+*                                  TODO: incorporate checking qrdroid is installed using services
+*   sakiBomb-03         15Oct05    TODO: Change naming convention to append count (for doubles)
 *
 *
 **/
@@ -42,9 +44,11 @@ import java.util.ArrayList;
 import java.util.Date;
 
 
+
 public class RenamePartsMain extends Activity {
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
+    static final int REQUEST_SCAN_QRDROID = 2;
 
     //Main.xml parts
     ImageView mPicSample;
@@ -56,6 +60,26 @@ public class RenamePartsMain extends Activity {
     static File mImagePath;   //directory as a file
     static String mTmpFileName; //only the name of the file (stores just timestamp for uniqueness)
     static File mTempImage;   //actual image that was saved
+
+
+    private boolean handleRename(File oldfile, File newFile)
+    {
+        //create file that we want to store picture at
+        File finalFile = new File(mImagePath, "newName" + mTmpFileName);
+
+        //rename current file to final file
+        mTempImage.renameTo(finalFile);
+        //remove the old file
+        mTempImage.delete();
+
+        //update both deletion of old file and creation of new file
+        galleryUpdate(Uri.fromFile(finalFile));
+        galleryUpdate(Uri.fromFile(mTempImage));
+
+        return false;
+
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,7 +109,7 @@ public class RenamePartsMain extends Activity {
             @Override
             public void onClick(View v) {
 
-              //save off picture with new name
+                //save off picture with new name
                 String new_file_name_string;
                 new_file_name_string = mRenameText.getText().toString() + ".jpg"; //sakiBomb-01
 
@@ -94,8 +118,7 @@ public class RenamePartsMain extends Activity {
 
                 //rename current file to final file
 
-                if(mTempImage.renameTo(finalFile))
-                {
+                if (mTempImage.renameTo(finalFile)) {
                     //remove the old file
                     mTempImage.delete();
 
@@ -111,13 +134,9 @@ public class RenamePartsMain extends Activity {
                     Toast.makeText(getApplicationContext(), "saved file: " + new_file_name_string,
                             Toast.LENGTH_LONG).show();
 
+                } else {
+                    //TODO:if renaming fails
                 }
-                else
-                {
-                   //TODO:if renaming fails
-                }
-
-
 
 
             }
@@ -131,7 +150,7 @@ public class RenamePartsMain extends Activity {
             public void onClick(View v) {
 
                 //if(mCurrentImageUri==null) TODO: need to take care of when mCurrImageUri is not null bc coming back from interrupted cycle
-                    mCurrentImageUri = getImageFileUri();
+                mCurrentImageUri = getImageFileUri();
 
                 //set up camera intent
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
@@ -148,8 +167,14 @@ public class RenamePartsMain extends Activity {
         scanBarcode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                /*//Set up intent using Zxing
                 IntentIntegrator integrator = new IntentIntegrator(RenamePartsMain.this);
                 integrator.initiateScan();
+                */
+
+                //Set up intent using QR Droid  sakiBomb-02
+                Intent QRDroidIntent = new Intent("la.droid.qr.scan");
+                startActivityForResult(QRDroidIntent, REQUEST_SCAN_QRDROID);
             }
         });
 
@@ -185,6 +210,10 @@ public class RenamePartsMain extends Activity {
                         //TODO: handle invalid scan
                     }
                     break;
+                case REQUEST_SCAN_QRDROID:
+                    String result = data.getExtras().getString("la.droid.qr.result");
+                    mRenameText.append(result.replaceAll("\\s", "_"));
+                    break;
 
                 default:
                     break;
@@ -218,29 +247,6 @@ public class RenamePartsMain extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    private boolean renameFile(File oldfile, File newFile)
-    {
-        //create file that we want to store picture at
-        File finalFile = new File(mImagePath, "newName" + mTmpFileName);
-
-        //rename current file to final file
-        mTempImage.renameTo(finalFile);
-        //remove the old file
-        mTempImage.delete();
-
-        //update both deletion of old file and creation of new file
-        galleryUpdate(Uri.fromFile(finalFile));
-        galleryUpdate(Uri.fromFile(mTempImage));
-
-        return false;
-
-    }
-
-    private String parseBarcodeScan()
-    {
-
-        return null;
-    }
 
     private void galleryUpdate(Uri imageUri) {
         /**
