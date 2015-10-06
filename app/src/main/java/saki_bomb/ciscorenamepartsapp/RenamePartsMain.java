@@ -1,7 +1,7 @@
 /*
 *   sakiBomb            15Sep24    Created RenamePartsMain
 *   sakiBomb-01         15Oct04    rename pics without timestamp
-*   sakiBomb-01         15Oct05    test VC commit
+*
 *
 *
 **/
