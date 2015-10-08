@@ -64,20 +64,35 @@ public class RenamePartsMain extends Activity {
 
     private boolean handleRename(File oldfile, File newFile)
     {
-        //create file that we want to store picture at
-        File finalFile = new File(mImagePath, "newName" + mTmpFileName);
-
-        //rename current file to final file
-        mTempImage.renameTo(finalFile);
-        //remove the old file
-        mTempImage.delete();
-
-        //update both deletion of old file and creation of new file
-        galleryUpdate(Uri.fromFile(finalFile));
-        galleryUpdate(Uri.fromFile(mTempImage));
 
         return false;
 
+    }
+
+    private boolean FindValidFileName(File srcFile)
+    {
+        int counter = 0;
+        boolean hasCounter = false;
+        String suffix = "";
+
+        //Names will be as follows xxxx_counter.jpg
+
+        File curFile = srcFile;
+
+        //check if the file already exists:
+        while(curFile.exists())
+        {
+            //file already exists so append counter
+            counter++;
+
+
+
+
+
+
+        }
+
+        return true;
     }
 
 
@@ -115,6 +130,8 @@ public class RenamePartsMain extends Activity {
 
                 //file to store final picture in
                 File finalFile = new File(mImagePath, new_file_name_string);
+
+                FindValidFileName(finalFile);
 
                 //rename current file to final file
 
@@ -155,7 +172,6 @@ public class RenamePartsMain extends Activity {
                 //set up camera intent
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                 if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-                    //takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(new File("/sdcard/tmp")));
                     takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCurrentImageUri); // set the image file name
                     startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
                 }
@@ -191,13 +207,7 @@ public class RenamePartsMain extends Activity {
                     mPicSample.setImageURI(mCurrentImageUri);
                     break;
                 case IntentIntegrator.REQUEST_CODE:
-                    /*
-                    * Scanning barcode should just fill up name section
-                    * With each scan the name section will become more populated
-                    *
-                    * Acutally assigning the name can occur when hitting submit button
-                    * */
-
+                    //Return from ZXing Code Currently unused
                     IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, data);
                     if (scanResult != null) {
                         //edit rename box with scanned info
@@ -258,6 +268,10 @@ public class RenamePartsMain extends Activity {
     }
 
 
+    /*
+    * Creates a tempoary destination to store image
+    *
+    * */
     private static Uri getImageFileUri(){
 
         // Create a storage directory for the images
@@ -265,28 +279,29 @@ public class RenamePartsMain extends Activity {
         // using Environment.getExternalStorageState() before doing this
         mImagePath = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES), "Cicon_Pics");
-        //Log.d(tag,"Find "+mImagePath.getAbsolutePath());
-        if (! mImagePath.exists()){
-            if (! mImagePath.mkdirs()){
+
+        if (!mImagePath.exists()){
+            if (!mImagePath.mkdirs())
+            {
                 Log.d("CameraTestIntent", "failed to create directory");
                 return null;
-            }else{
-                //Log.d(tag,"create new Tux folder");
             }
         }
 
         // Create an image file name
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         mTmpFileName = "" + timeStamp + ".jpg";
-        File image = new File(mImagePath, mTmpFileName);
-        mTempImage = image;
+        mTempImage = new File(mImagePath, mTmpFileName);
 
 
-        if(!image.exists()){
-            try {
-                image.createNewFile();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
+
+        if(!mTempImage.exists()){
+            try
+            {
+                mTempImage.createNewFile();
+            }
+            catch (IOException e)
+            {
                 e.printStackTrace();
             }
         }
@@ -295,7 +310,7 @@ public class RenamePartsMain extends Activity {
         //return image;
 
         // Create an File Uri
-        return Uri.fromFile(image);
+        return Uri.fromFile(mTempImage);
     }
 
     /*
