@@ -4,6 +4,7 @@
 *   sakiBomb-02         15Oct05    Replace ZXing barcode reader with QR droid barcode reader
 *                                  TODO: incorporate checking qrdroid is installed using services
 *   sakiBomb-03         15Oct05    TODO: Change naming convention to append count (for doubles)
+*   sakiBomb-04         15Oct07    Refactor using Picture class
 *
 *
 **/
@@ -20,7 +21,6 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -36,12 +36,6 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.net.URI;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
 
 
 
@@ -54,46 +48,11 @@ public class RenamePartsMain extends Activity {
     ImageView mPicSample;
     EditText mRenameText;
 
-    //static File mImagePath;
-    static String mCurrentImagePath;  //directory in string
-    private Uri mCurrentImageUri;    //actual pic location
-    static File mImagePath;   //directory as a file
-    static String mTmpFileName; //only the name of the file (stores just timestamp for uniqueness)
-    static File mTempImage;   //actual image that was saved
+    //using Picture class
+    static Picture mPicture;
+    static Picture mTmpPicture;
 
 
-    private boolean handleRename(File oldfile, File newFile)
-    {
-
-        return false;
-
-    }
-
-    private boolean FindValidFileName(File srcFile)
-    {
-        int counter = 0;
-        boolean hasCounter = false;
-        String suffix = "";
-
-        //Names will be as follows xxxx_counter.jpg
-
-        File curFile = srcFile;
-
-        //check if the file already exists:
-        while(curFile.exists())
-        {
-            //file already exists so append counter
-            counter++;
-
-
-
-
-
-
-        }
-
-        return true;
-    }
 
 
     @Override
@@ -101,6 +60,16 @@ public class RenamePartsMain extends Activity {
         super.onCreate(savedInstanceState);
         //setContentView(R.layout.activity_rename_parts_main);
         setContentView(R.layout.main);
+
+        CreateDefaultDirectory();
+
+        // Create a storage directory for the images
+        // TODO: To be safe(er), you should check that the SDCard is mounted
+        // using Environment.getExternalStorageState() before doing this
+        mTmpPicture = new Picture(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES)+ "/Cicon_Pics", "tmpImage");  //used to save initial picture
+        mPicture = new Picture();
+
 
         //set main.xml parts
         mPicSample = (ImageView) findViewById(R.id.imgView);
@@ -125,30 +94,30 @@ public class RenamePartsMain extends Activity {
             public void onClick(View v) {
 
                 //save off picture with new name
-                String new_file_name_string;
-                new_file_name_string = mRenameText.getText().toString() + ".jpg"; //sakiBomb-01
+                String newName = mRenameText.getText().toString();
+                mPicture.setName(newName); //sakiBomb-03
+                mPicture.setPath(mTmpPicture.getPath());
 
                 //file to store final picture in
-                File finalFile = new File(mImagePath, new_file_name_string);
+                File finalFile = CreateValidFile(mPicture);
 
-                FindValidFileName(finalFile);
 
                 //rename current file to final file
 
-                if (mTempImage.renameTo(finalFile)) {
+                if (mTmpPicture.getFile().renameTo(finalFile)) {
                     //remove the old file
-                    mTempImage.delete();
+                    mTmpPicture.getFile().delete();
 
                     //update both deletion of old file and creation of new file
                     galleryUpdate(Uri.fromFile(finalFile));
-                    galleryUpdate(Uri.fromFile(mTempImage));
+                    galleryUpdate(mTmpPicture.getPicUri());
 
                     //remove thumbnail and name
                     mPicSample.setImageURI(null);
                     mRenameText.setText("");
 
                     //notify user that the pic was saved
-                    Toast.makeText(getApplicationContext(), "saved file: " + new_file_name_string,
+                    Toast.makeText(getApplicationContext(), "saved file: " + mPicture.getName() + ".jpg",
                             Toast.LENGTH_LONG).show();
 
                 } else {
@@ -165,14 +134,12 @@ public class RenamePartsMain extends Activity {
         takePicButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                //if(mCurrentImageUri==null) TODO: need to take care of when mCurrImageUri is not null bc coming back from interrupted cycle
-                mCurrentImageUri = getImageFileUri();
-
                 //set up camera intent
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                 if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCurrentImageUri); // set the image file name
+                    //save image to temp file for now
+                    mTmpPicture.createPicFile();
+                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mTmpPicture.getPicUri());
                     startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
                 }
 
@@ -193,8 +160,6 @@ public class RenamePartsMain extends Activity {
                 startActivityForResult(QRDroidIntent, REQUEST_SCAN_QRDROID);
             }
         });
-
-
     }
 
 
@@ -204,7 +169,7 @@ public class RenamePartsMain extends Activity {
             switch (requestCode) {
                 case REQUEST_IMAGE_CAPTURE:
                     //Set thumbnail of picture
-                    mPicSample.setImageURI(mCurrentImageUri);
+                    mPicSample.setImageURI(mTmpPicture.getPicUri());
                     break;
                 case IntentIntegrator.REQUEST_CODE:
                     //Return from ZXing Code Currently unused
@@ -228,9 +193,6 @@ public class RenamePartsMain extends Activity {
                 default:
                     break;
             }
-
-
-
         }
     }
 
@@ -268,50 +230,41 @@ public class RenamePartsMain extends Activity {
     }
 
 
-    /*
-    * Creates a tempoary destination to store image
-    *
-    * */
-    private static Uri getImageFileUri(){
+    private void CreateDefaultDirectory()
+    {
+        //File newDir = new File(mTmpPicture.getPath());
+        File newDir = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES), "Cicon_pics");
 
-        // Create a storage directory for the images
-        // TODO: To be safe(er), you should check that the SDCard is mounted
-        // using Environment.getExternalStorageState() before doing this
-        mImagePath = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), "Cicon_Pics");
-
-        if (!mImagePath.exists()){
-            if (!mImagePath.mkdirs())
+        if(!newDir.exists())
+            if(!newDir.mkdirs())
             {
                 Log.d("CameraTestIntent", "failed to create directory");
-                return null;
             }
-        }
-
-        // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        mTmpFileName = "" + timeStamp + ".jpg";
-        mTempImage = new File(mImagePath, mTmpFileName);
-
-
-
-        if(!mTempImage.exists()){
-            try
-            {
-                mTempImage.createNewFile();
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-        }
-
-
-        //return image;
-
-        // Create an File Uri
-        return Uri.fromFile(mTempImage);
     }
+
+    /*
+*   Looks through saved pictures in external memory to
+*   see if name is used. If so appends a counter to make file unique
+*/
+    private File CreateValidFile(Picture pic)
+    {
+        //Names will be as follows xxxx_counter.jpg
+
+        File curFile = new File(pic.getPath(), pic.getName() + ".jpg");
+
+        //check if the file already exists:
+        while(curFile.exists())
+        {
+            //file already exists, increment name until it's a new file
+            pic.incName();
+            curFile = new File(pic.getPath(), pic.getName() + ".jpg");
+        }
+
+        //at this point filename should now be unique
+        return curFile;
+    }
+
 
     /*
     @Override

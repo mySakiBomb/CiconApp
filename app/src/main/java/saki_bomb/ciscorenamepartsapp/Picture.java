@@ -1,12 +1,28 @@
 package saki_bomb.ciscorenamepartsapp;
 
+import android.net.Uri;
+
+import java.io.File;
+import java.io.IOException;
+
 /**
  * Created by saki on 10/6/15.
  */
 public class Picture {
     String mPathDir; //String of Directory
     String mName;    //Name of the file without file type(i.e. jpg, png)
+    File mFile;      //File created using mPathDIr and mName
     int mDuplicateId = 0;  //internal counter used for Pictures with duplicate file names. 0 means unused
+
+    public Picture(String dir, String name)
+    {
+        mPathDir = dir;
+        mName = name;
+
+    }
+
+    public Picture()
+    {}
 
     public String getFullPath()
     {
@@ -60,6 +76,38 @@ public class Picture {
         }
 
         setName(newName);
+    }
+
+    public void createPicFile()
+    {
+        mFile = new File(mPathDir, mName);
+
+        if(mFile.exists())
+        {
+            mFile.delete();
+        }
+
+        //create a fresh batch
+            try {
+                mFile.createNewFile();
+            }
+            catch(IOException e)
+            {
+                e.printStackTrace();
+            }
+    }
+
+    public Uri getPicUri()
+    {
+        if(mFile != null)
+            return Uri.fromFile(mFile);
+
+        return null; //error
+    }
+
+    public File getFile()
+    {
+        return mFile;
     }
 
 
