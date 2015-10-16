@@ -5,19 +5,17 @@
 *                                  TODO: incorporate checking qrdroid is installed using services
 *   sakiBomb-03         15Oct05    TODO: Change naming convention to append count (for doubles)
 *   sakiBomb-04         15Oct07    Refactor using Picture class
-*
+*   sakiBomb-05         15Oct09    Text embedding in Image
+*   sakiBomb-06         15Oct11    Fix renaming picture error
+*   sakiBomb-07         15Oct11    Check for null pics and null name values on submit
 *
 **/
-
-
-
-
 
 
 package saki_bomb.ciscorenamepartsapp;
 
 import android.app.Activity;
-import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -35,8 +33,12 @@ import android.widget.Toast;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.File;
-
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 
 
 public class RenamePartsMain extends Activity {
@@ -48,7 +50,7 @@ public class RenamePartsMain extends Activity {
     ImageView mPicSample;
     EditText mRenameText;
 
-    //using Picture class
+    //using Picture class  sakiBomb-04
     static Picture mPicture;
     static Picture mTmpPicture;
 
@@ -71,10 +73,11 @@ public class RenamePartsMain extends Activity {
         mPicture = new Picture();
 
 
-        //set main.xml parts
+        //set main.xml parts and initialize
         mPicSample = (ImageView) findViewById(R.id.imgView);
         mRenameText = (EditText) findViewById(R.id.file_name_edit);
 
+        mRenameText.setText("");
         //if(savedInstanceState.getString("thumbnailUri") != null)
         //TODO: figure out where to call this
         //    onRestoreInstanceState(savedInstanceState);
@@ -93,8 +96,24 @@ public class RenamePartsMain extends Activity {
             @Override
             public void onClick(View v) {
 
+
                 //save off picture with new name
                 String newName = mRenameText.getText().toString();
+
+                //error check for blank names and make sure pic was taken  /*sakiBomb-07-->*/
+                if(newName.equals(""))
+                {
+                    Toast.makeText(getApplicationContext(), "Name is empty.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                else if(mPicSample.getDrawable() == null)
+                {
+                    Toast.makeText(getApplicationContext(), "Need to take a picture before submitting", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                /*<--sakiBomb-07*/
+
+
                 mPicture.setName(newName); //sakiBomb-03
                 mPicture.setPath(mTmpPicture.getPath());
 
@@ -108,17 +127,24 @@ public class RenamePartsMain extends Activity {
                     //remove the old file
                     mTmpPicture.getFile().delete();
 
+                    //tmp image is now saved off into new renamed file
+                    //note:finalFile is based of mPicture hence using mPicture below
+                    //now embed name into picture  /*sakiBomb-04*/
+                    Bitmap finalIamge = mPicture.embedFileNameToImage();
+                    SaveBitmapToMemory(finalIamge, mPicture);
+
                     //update both deletion of old file and creation of new file
                     galleryUpdate(Uri.fromFile(finalFile));
                     galleryUpdate(mTmpPicture.getPicUri());
 
-                    //remove thumbnail and name
-                    mPicSample.setImageURI(null);
-                    mRenameText.setText("");
-
-                    //notify user that the pic was saved
                     Toast.makeText(getApplicationContext(), "saved file: " + mPicture.getName() + ".jpg",
                             Toast.LENGTH_LONG).show();
+
+                    //reset member values:
+                    mPicSample.setImageURI(null);
+                    mRenameText.setText("");
+                    mPicture = new Picture();     /*sakiBomb-06*/ //reset pictures
+
 
                 } else {
                     //TODO:if renaming fails
@@ -249,7 +275,7 @@ public class RenamePartsMain extends Activity {
 */
     private File CreateValidFile(Picture pic)
     {
-        //Names will be as follows xxxx_counter.jpg
+        //Names will be as follows xxxx_(c).jpg
 
         File curFile = new File(pic.getPath(), pic.getName() + ".jpg");
 
@@ -264,6 +290,25 @@ public class RenamePartsMain extends Activity {
         //at this point filename should now be unique
         return curFile;
     }
+
+
+    /*SakiBomb-04 -->*/
+    private void SaveBitmapToMemory(Bitmap image, Picture outputFile)
+    {
+        try {
+
+            //File outFile = new File(outputFile.getPath(), outputFile.getName());
+            File outFile = new File(outputFile.getFullPath());
+            BufferedOutputStream os = new BufferedOutputStream(
+                    new FileOutputStream(outFile));
+
+            image.compress(Bitmap.CompressFormat.JPEG, 100, os);
+
+        } catch (FileNotFoundException e) {
+            Log.e("SaveBitmapToMemory", "FileNotFoundException");
+        }
+    }
+    /*<--SakiBomb-04*/
 
 
     /*

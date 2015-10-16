@@ -1,5 +1,19 @@
+/**
+ *      sakiBomb            15Oct06    Created Picture.java
+ *      sakiBomb-06         15Oct11    Fix renaming issue
+ *
+ */
+
+
+
 package saki_bomb.ciscorenamepartsapp;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.net.Uri;
 
 import java.io.File;
@@ -26,7 +40,7 @@ public class Picture {
 
     public String getFullPath()
     {
-        return mPathDir + mName + ".jpg";
+        return mPathDir + "/" + mName + ".jpg";
     }
 
     public String getName()
@@ -65,7 +79,7 @@ public class Picture {
             mDuplicateId++;
 
             newName = mName.substring(0, mName.length() - removeLength);
-            newName = mName + "(" + mDuplicateId + ")";
+            newName += "(" + mDuplicateId + ")";    /*sakiBomb-06*/
 
         }
         else
@@ -108,6 +122,38 @@ public class Picture {
     public File getFile()
     {
         return mFile;
+    }
+
+
+    /*
+    *   This method assumes that an image exists at the file location
+    *   given by mPath + mName.
+    *
+    * */
+    public Bitmap embedFileNameToImage()
+    {
+        Bitmap originalImage = BitmapFactory.decodeFile(getFullPath());
+        //TODO: make more memory efficient:
+        // http://stackoverflow.com/questions/4349075/bitmapfactory-decoderesource-returns-a-mutable-bitmap-in-android-2-2-and-an-immu/9194259#9194259
+        Bitmap copyOriginalImage = originalImage.copy(Bitmap.Config.ARGB_8888, true);
+        Canvas canvas = new Canvas(copyOriginalImage);
+
+        //Set up box border for text overlay
+        Paint boxInfo = new Paint();
+        boxInfo.setStyle(Paint.Style.FILL);
+        boxInfo.setColor(Color.BLACK);
+        RectF blackBox = new RectF(0, canvas.getHeight() - 100, canvas.getWidth(), canvas.getHeight());
+        canvas.drawRect(blackBox, boxInfo);
+
+        //setup text
+        Paint text_info = new Paint();
+        text_info.setColor(Color.WHITE);
+        text_info.setTextSize(40);
+        canvas.drawText(mName + ".jpg", 0, canvas.getHeight() - 40, text_info);
+
+        //originalImage should be loaded with an embedded picture at this point
+        return copyOriginalImage;
+
     }
 
 
