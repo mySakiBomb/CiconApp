@@ -1,6 +1,27 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools" tools:context=".RenamePartsMain">
-    <item android:id="@+id/action_settings" android:title="@string/action_settings"
-        android:orderInCategory="100" app:showAsAction="never" />
+    <item
+        android:id="@+id/takePicItem"
+        android:title="@string/action_takePic"
+        android:icon="@drawable/camera"
+        app:showAsAction="always"
+        />
+
+    <item
+        android:id="@+id/scanBarcodeItem"
+        android:title="@string/action_scanqr"
+        android:icon="@drawable/qrscan"
+        app:showAsAction="always"/>
+    <item
+        android:id="@+id/directoryItem"
+        android:title="@string/action_dir"
+        android:icon="@drawable/directory"
+        app:showAsAction="always"
+        />
+
 </menu>
+
+
+
+

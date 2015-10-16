@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="saki_bomb.ciscorenamepartsapp"
-    android:versionCode="3"
-    android:versionName="1.02">
+    android:versionCode="5"
+    android:versionName="1.04">
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-feature android:name="android.hardware.camera"
@@ -15,12 +15,14 @@
         android:allowBackup="true"
         android:icon="@drawable/cicon"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        >
         <activity
             android:name=".RenamePartsMain"
             android:label="@string/app_name"
-            android:screenOrientation="landscape">
-
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.AppCompat.Light.DarkActionBar"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

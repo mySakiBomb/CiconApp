@@ -8,18 +8,23 @@
 *   sakiBomb-05         15Oct09    Text embedding in Image
 *   sakiBomb-06         15Oct11    Fix renaming picture error
 *   sakiBomb-07         15Oct11    Check for null pics and null name values on submit
+*   sakiBomb-08         15Oct15    New UI. Now using actionbar
+*   sakiBomb-09         15Oct15    Created new method to handle old button logic (i.e. pic, qr scan)
+*
 *
 **/
 
 
 package saki_bomb.ciscorenamepartsapp;
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -41,7 +46,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 
 
-public class RenamePartsMain extends Activity {
+public class RenamePartsMain extends AppCompatActivity {
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
     static final int REQUEST_SCAN_QRDROID = 2;
@@ -61,7 +66,16 @@ public class RenamePartsMain extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         //setContentView(R.layout.activity_rename_parts_main);
-        setContentView(R.layout.main);
+        //setContentView(R.layout.main);
+        setContentView(R.layout.cicon_rename_main_actionbar);
+
+        /*sakiBomb-08-->*/
+        //add logo to action bar
+        android.support.v7.app.ActionBar ab = getSupportActionBar();
+        ab.setLogo(R.drawable.cicon);
+        ab.setDisplayUseLogoEnabled(true);
+        ab.setDisplayShowHomeEnabled(true);
+        /*<--sakiBomb-08*/
 
         CreateDefaultDirectory();
 
@@ -95,99 +109,24 @@ public class RenamePartsMain extends Activity {
         submit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-
-                //save off picture with new name
-                String newName = mRenameText.getText().toString();
-
-                //error check for blank names and make sure pic was taken  /*sakiBomb-07-->*/
-                if(newName.equals(""))
-                {
-                    Toast.makeText(getApplicationContext(), "Name is empty.", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                else if(mPicSample.getDrawable() == null)
-                {
-                    Toast.makeText(getApplicationContext(), "Need to take a picture before submitting", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                /*<--sakiBomb-07*/
-
-
-                mPicture.setName(newName); //sakiBomb-03
-                mPicture.setPath(mTmpPicture.getPath());
-
-                //file to store final picture in
-                File finalFile = CreateValidFile(mPicture);
-
-
-                //rename current file to final file
-
-                if (mTmpPicture.getFile().renameTo(finalFile)) {
-                    //remove the old file
-                    mTmpPicture.getFile().delete();
-
-                    //tmp image is now saved off into new renamed file
-                    //note:finalFile is based of mPicture hence using mPicture below
-                    //now embed name into picture  /*sakiBomb-04*/
-                    Bitmap finalIamge = mPicture.embedFileNameToImage();
-                    SaveBitmapToMemory(finalIamge, mPicture);
-
-                    //update both deletion of old file and creation of new file
-                    galleryUpdate(Uri.fromFile(finalFile));
-                    galleryUpdate(mTmpPicture.getPicUri());
-
-                    Toast.makeText(getApplicationContext(), "saved file: " + mPicture.getName() + ".jpg",
-                            Toast.LENGTH_LONG).show();
-
-                    //reset member values:
-                    mPicSample.setImageURI(null);
-                    mRenameText.setText("");
-                    mPicture = new Picture();     /*sakiBomb-06*/ //reset pictures
-
-
-                } else {
-                    //TODO:if renaming fails
-                }
-
-
+                HandleSubmit();
             }
         });
 
 
-
-        final Button takePicButton = (Button) findViewById(R.id.takePicButton);
-        takePicButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                //set up camera intent
-                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-                    //save image to temp file for now
-                    mTmpPicture.createPicFile();
-                    takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mTmpPicture.getPicUri());
-                    startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-                }
-
-            }
-        });
-
-        final Button scanBarcode = (Button) findViewById(R.id.scanBarcodeButton);
-        scanBarcode.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                /*//Set up intent using Zxing
-                IntentIntegrator integrator = new IntentIntegrator(RenamePartsMain.this);
-                integrator.initiateScan();
-                */
-
-                //Set up intent using QR Droid  sakiBomb-02
-                Intent QRDroidIntent = new Intent("la.droid.qr.scan");
-                startActivityForResult(QRDroidIntent, REQUEST_SCAN_QRDROID);
-            }
-        });
     }
 
+    @Override
+    protected void onResume()
+    {
+        super.onResume();
+
+        View decorView = getWindow().getDecorView();
+        // Hide the status bar.
+        int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN;
+        decorView.setSystemUiVisibility(uiOptions);
+
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -222,11 +161,11 @@ public class RenamePartsMain extends Activity {
         }
     }
 
-
+    //MENU Handling
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_rename_parts_main, menu);
+        getMenuInflater().inflate(R.menu.menu_rename_parts_main, menu); //sakiBomb-08
         return true;
     }
 
@@ -237,11 +176,18 @@ public class RenamePartsMain extends Activity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        /*sakiBomb-08-->*/
+         if(id == R.id.takePicItem)
+        {
+            HandleTakePic();
             return true;
         }
-
+        else if(id == R.id.scanBarcodeItem)
+        {
+            HandleScanQR();
+            return true;
+        }
+        /*<--sakiBomb-08*/
         return super.onOptionsItemSelected(item);
     }
 
@@ -291,6 +237,88 @@ public class RenamePartsMain extends Activity {
         return curFile;
     }
 
+    /*sakiBomb-09 -->*/
+    private void HandleTakePic()
+    {
+        //set up camera intent
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            //save image to temp file for now
+            mTmpPicture.createPicFile();
+            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mTmpPicture.getPicUri());
+            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+        }
+    }
+
+    private void HandleScanQR()
+    {
+        /*//Set up intent using Zxing
+                IntentIntegrator integrator = new IntentIntegrator(RenamePartsMain.this);
+                integrator.initiateScan();
+                */
+
+        //Set up intent using QR Droid  sakiBomb-02
+        Intent QRDroidIntent = new Intent("la.droid.qr.scan");
+        startActivityForResult(QRDroidIntent, REQUEST_SCAN_QRDROID);
+
+    }
+
+    private void HandleSubmit()
+    {
+        //save off picture with new name
+        String newName = mRenameText.getText().toString();
+
+        //error check for blank names and make sure pic was taken  /*sakiBomb-07-->*/
+        if(newName.equals(""))
+        {
+            Toast.makeText(getApplicationContext(), "Name is empty.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        else if(mPicSample.getDrawable() == null)
+        {
+            Toast.makeText(getApplicationContext(), "Need to take a picture before submitting", Toast.LENGTH_LONG).show();
+            return;
+        }
+                /*<--sakiBomb-07*/
+
+
+        mPicture.setName(newName); //sakiBomb-03
+        mPicture.setPath(mTmpPicture.getPath());
+
+        //file to store final picture in
+        File finalFile = CreateValidFile(mPicture);
+
+
+        //rename current file to final file
+
+        if (mTmpPicture.getFile().renameTo(finalFile)) {
+            //remove the old file
+            mTmpPicture.getFile().delete();
+
+            //tmp image is now saved off into new renamed file
+            //note:finalFile is based of mPicture hence using mPicture below
+            //now embed name into picture  /*sakiBomb-04*/
+            Bitmap finalIamge = mPicture.embedFileNameToImage();
+            SaveBitmapToMemory(finalIamge, mPicture);
+
+            //update both deletion of old file and creation of new file
+            galleryUpdate(Uri.fromFile(finalFile));
+            galleryUpdate(mTmpPicture.getPicUri());
+
+            Toast.makeText(getApplicationContext(), "saved file: " + mPicture.getName() + ".jpg",
+                    Toast.LENGTH_LONG).show();
+
+            //reset member values:
+            mPicSample.setImageURI(null);
+            mRenameText.setText("");
+            mPicture = new Picture();     /*sakiBomb-06*/ //reset pictures
+
+
+        } else {
+            //TODO:if renaming fails
+        }
+    }
+    /*<--sakiBomb-09*/
 
     /*SakiBomb-04 -->*/
     private void SaveBitmapToMemory(Bitmap image, Picture outputFile)
@@ -308,6 +336,9 @@ public class RenamePartsMain extends Activity {
             Log.e("SaveBitmapToMemory", "FileNotFoundException");
         }
     }
+
+
+
     /*<--SakiBomb-04*/
 
 
