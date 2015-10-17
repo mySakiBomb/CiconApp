@@ -13,12 +13,13 @@
         android:title="@string/action_scanqr"
         android:icon="@drawable/qrscan"
         app:showAsAction="always"/>
-    <item
-        android:id="@+id/directoryItem"
+
+    <item android:id="@+id/directoryButton"
         android:title="@string/action_dir"
         android:icon="@drawable/directory"
         app:showAsAction="always"
         />
+
 
 </menu>
 

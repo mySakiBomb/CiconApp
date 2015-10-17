@@ -10,15 +10,13 @@
 *   sakiBomb-07         15Oct11    Check for null pics and null name values on submit
 *   sakiBomb-08         15Oct15    New UI. Now using actionbar
 *   sakiBomb-09         15Oct15    Created new method to handle old button logic (i.e. pic, qr scan)
-*
+*   sakiBomb-10         15Oct17    Handle directory changes
 *
 **/
 
 
 package saki_bomb.ciscorenamepartsapp;
 
-import android.app.ActionBar;
-import android.app.Activity;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Environment;
@@ -38,9 +36,7 @@ import android.widget.Toast;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -49,17 +45,19 @@ import java.io.FileOutputStream;
 public class RenamePartsMain extends AppCompatActivity {
 
     static final int REQUEST_IMAGE_CAPTURE = 1;
-    static final int REQUEST_SCAN_QRDROID = 2;
+    static final int REQUEST_SCAN_QRDROID_NAME = 2;
+    static final int REQUEST_SCAN_QRDROID_DIR = 3;
+
+    static final String DEFAULT_DIR = "/Cicon_Pics";
 
     //Main.xml parts
     ImageView mPicSample;
     EditText mRenameText;
+    EditText mDirectory;   /*sakiBomb-10*/
 
     //using Picture class  sakiBomb-04
     static Picture mPicture;
     static Picture mTmpPicture;
-
-
 
 
     @Override
@@ -68,6 +66,7 @@ public class RenamePartsMain extends AppCompatActivity {
         //setContentView(R.layout.activity_rename_parts_main);
         //setContentView(R.layout.main);
         setContentView(R.layout.cicon_rename_main_actionbar);
+
 
         /*sakiBomb-08-->*/
         //add logo to action bar
@@ -83,16 +82,18 @@ public class RenamePartsMain extends AppCompatActivity {
         // TODO: To be safe(er), you should check that the SDCard is mounted
         // using Environment.getExternalStorageState() before doing this
         mTmpPicture = new Picture(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES)+ "/Cicon_Pics", "tmpImage");  //used to save initial picture
+                Environment.DIRECTORY_PICTURES) + "/Cicon_Pics", "tmpImage");  //used to save initial picture
         mPicture = new Picture();
 
 
         //set main.xml parts and initialize
         mPicSample = (ImageView) findViewById(R.id.imgView);
         mRenameText = (EditText) findViewById(R.id.file_name_edit);
-
         mRenameText.setText("");
         //if(savedInstanceState.getString("thumbnailUri") != null)
+
+        mDirectory = (EditText) findViewById(R.id.directory_name_field);
+
         //TODO: figure out where to call this
         //    onRestoreInstanceState(savedInstanceState);
 
@@ -117,8 +118,7 @@ public class RenamePartsMain extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume()
-    {
+    protected void onResume() {
         super.onResume();
 
         View decorView = getWindow().getDecorView();
@@ -142,19 +142,24 @@ public class RenamePartsMain extends AppCompatActivity {
                     if (scanResult != null) {
                         //edit rename box with scanned info
                         mRenameText.append(scanResult.getContents().replaceAll("\\s", "_"));
-
-                    }
-                    else
-                    {
+                    } else {
                         // else continue with any other code you need in the method
                         //TODO: handle invalid scan
                     }
                     break;
-                case REQUEST_SCAN_QRDROID:
+                case REQUEST_SCAN_QRDROID_NAME:
                     String result = data.getExtras().getString("la.droid.qr.result");
                     mRenameText.append(result.replaceAll("\\s", "_"));
                     break;
-
+                /*sakiBomb-10-->*/
+                case REQUEST_SCAN_QRDROID_DIR:
+                    String result_dir = data.getExtras().getString("la.droid.qr.result");
+                    if (result_dir.charAt(0) == '/')
+                        mDirectory.setText(DEFAULT_DIR + result_dir);
+                    else
+                        mDirectory.setText(DEFAULT_DIR + '/' + result_dir);
+                    break;
+                /*<--sakiBomb-10*/
                 default:
                     break;
             }
@@ -166,6 +171,20 @@ public class RenamePartsMain extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_rename_parts_main, menu); //sakiBomb-08
+
+        //Handler for directory button (note it is not an icon like pic and scanner)
+        //TODO: if we can convert icon into a button
+  /*      Button dirButton = (Button) menu.findItem(R.id.directoryButton).getActionView();
+
+
+        dirButton.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Toast.makeText(getApplicationContext(), "long hold success", Toast.LENGTH_LONG).show();
+                return false;
+            }
+        });
+        */
         return true;
     }
 
@@ -177,17 +196,18 @@ public class RenamePartsMain extends AppCompatActivity {
         int id = item.getItemId();
 
         /*sakiBomb-08-->*/
-         if(id == R.id.takePicItem)
-        {
-            HandleTakePic();
+        if (id == R.id.takePicItem) {
+            StartTakePicIntent();
+            return true;
+        } else if (id == R.id.scanBarcodeItem) {
+            StartScanQRNameIntent();
+            return true;
+        } else if (id == R.id.directoryButton) {
+            StartScanQRDirIntent();
             return true;
         }
-        else if(id == R.id.scanBarcodeItem)
-        {
-            HandleScanQR();
-            return true;
-        }
-        /*<--sakiBomb-08*/
+
+         /*<--sakiBomb-08*/
         return super.onOptionsItemSelected(item);
     }
 
@@ -202,32 +222,43 @@ public class RenamePartsMain extends AppCompatActivity {
     }
 
 
-    private void CreateDefaultDirectory()
-    {
+    private void CreateDefaultDirectory() {
         //File newDir = new File(mTmpPicture.getPath());
         File newDir = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES), "Cicon_pics");
 
-        if(!newDir.exists())
-            if(!newDir.mkdirs())
-            {
+        if (!newDir.exists())
+            if (!newDir.mkdirs()) {
                 Log.d("CameraTestIntent", "failed to create directory");
             }
     }
+
+
+    /*creates given directory if it does not exist*/
+    /*sakiBomb-10-->*/
+    private void CreateDirectory(String directory_path)
+    {
+        File newDir = new File(directory_path);
+
+        if(!newDir.exists())
+            if(newDir.mkdirs())
+            {
+                Log.d("CreateNewDirectory", "failed to create new directory");
+            }
+    }
+    /*<--sakiBomb-10*/
 
     /*
 *   Looks through saved pictures in external memory to
 *   see if name is used. If so appends a counter to make file unique
 */
-    private File CreateValidFile(Picture pic)
-    {
+    private File CreateValidFile(Picture pic) {
         //Names will be as follows xxxx_(c).jpg
 
         File curFile = new File(pic.getPath(), pic.getName() + ".jpg");
 
         //check if the file already exists:
-        while(curFile.exists())
-        {
+        while (curFile.exists()) {
             //file already exists, increment name until it's a new file
             pic.incName();
             curFile = new File(pic.getPath(), pic.getName() + ".jpg");
@@ -238,8 +269,7 @@ public class RenamePartsMain extends AppCompatActivity {
     }
 
     /*sakiBomb-09 -->*/
-    private void HandleTakePic()
-    {
+    private void StartTakePicIntent() {
         //set up camera intent
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
@@ -250,8 +280,7 @@ public class RenamePartsMain extends AppCompatActivity {
         }
     }
 
-    private void HandleScanQR()
-    {
+    private void StartScanQRNameIntent() {
         /*//Set up intent using Zxing
                 IntentIntegrator integrator = new IntentIntegrator(RenamePartsMain.this);
                 integrator.initiateScan();
@@ -259,23 +288,27 @@ public class RenamePartsMain extends AppCompatActivity {
 
         //Set up intent using QR Droid  sakiBomb-02
         Intent QRDroidIntent = new Intent("la.droid.qr.scan");
-        startActivityForResult(QRDroidIntent, REQUEST_SCAN_QRDROID);
+        startActivityForResult(QRDroidIntent, REQUEST_SCAN_QRDROID_NAME);
 
     }
 
-    private void HandleSubmit()
-    {
+    /*sakiBomb-10-->*/
+    private void StartScanQRDirIntent() {
+        Intent scanQrForDirectory = new Intent("la.droid.qr.scan");
+        startActivityForResult(scanQrForDirectory, REQUEST_SCAN_QRDROID_DIR);
+    }
+    /*<--sakiBomb-10*/
+
+    private void HandleSubmit() {
         //save off picture with new name
         String newName = mRenameText.getText().toString();
+        String newDir = mDirectory.getText().toString();
 
         //error check for blank names and make sure pic was taken  /*sakiBomb-07-->*/
-        if(newName.equals(""))
-        {
+        if (newName.equals("")) {
             Toast.makeText(getApplicationContext(), "Name is empty.", Toast.LENGTH_LONG).show();
             return;
-        }
-        else if(mPicSample.getDrawable() == null)
-        {
+        } else if (mPicSample.getDrawable() == null) {
             Toast.makeText(getApplicationContext(), "Need to take a picture before submitting", Toast.LENGTH_LONG).show();
             return;
         }
@@ -283,7 +316,10 @@ public class RenamePartsMain extends AppCompatActivity {
 
 
         mPicture.setName(newName); //sakiBomb-03
-        mPicture.setPath(mTmpPicture.getPath());
+        mPicture.setPath(getExternalStoragePath() + newDir);    /*sakiBomb-10*/
+
+        //make sure directory for final image location is created
+        CreateDirectory(mPicture.getPath());
 
         //file to store final picture in
         File finalFile = CreateValidFile(mPicture);
@@ -305,8 +341,8 @@ public class RenamePartsMain extends AppCompatActivity {
             galleryUpdate(Uri.fromFile(finalFile));
             galleryUpdate(mTmpPicture.getPicUri());
 
-            Toast.makeText(getApplicationContext(), "saved file: " + mPicture.getName() + ".jpg",
-                    Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "saved file: " + mDirectory.getText().toString()
+                    + '/' + mPicture.getName() + ".jpg", Toast.LENGTH_LONG).show();
 
             //reset member values:
             mPicSample.setImageURI(null);
@@ -321,8 +357,7 @@ public class RenamePartsMain extends AppCompatActivity {
     /*<--sakiBomb-09*/
 
     /*SakiBomb-04 -->*/
-    private void SaveBitmapToMemory(Bitmap image, Picture outputFile)
-    {
+    private void SaveBitmapToMemory(Bitmap image, Picture outputFile) {
         try {
 
             //File outFile = new File(outputFile.getPath(), outputFile.getName());
@@ -337,7 +372,12 @@ public class RenamePartsMain extends AppCompatActivity {
         }
     }
 
+    public String getExternalStoragePath()
+    {
+        return  Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_PICTURES).toString();
 
+    }
 
     /*<--SakiBomb-04*/
 
