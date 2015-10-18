@@ -7,7 +7,6 @@
         android:icon="@drawable/camera"
         app:showAsAction="always"
         />
-
     <item
         android:id="@+id/scanBarcodeItem"
         android:title="@string/action_scanqr"
@@ -18,6 +17,7 @@
         android:title="@string/action_dir"
         android:icon="@drawable/directory"
         app:showAsAction="always"
+        app:actionViewClass="android.widget.ImageButton"
         />
 
 

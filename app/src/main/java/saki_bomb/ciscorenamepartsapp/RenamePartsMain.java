@@ -18,11 +18,14 @@
 package saki_bomb.ciscorenamepartsapp;
 
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.AppCompatButton;
+import android.widget.ImageButton;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -173,18 +176,31 @@ public class RenamePartsMain extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.menu_rename_parts_main, menu); //sakiBomb-08
 
         //Handler for directory button (note it is not an icon like pic and scanner)
-        //TODO: if we can convert icon into a button
-  /*      Button dirButton = (Button) menu.findItem(R.id.directoryButton).getActionView();
+        /*sakiBomb-10-->*/
+        ImageButton dirButton = (ImageButton) menu.findItem(R.id.directoryButton).getActionView();
+        Drawable d = getResources().getDrawable(R.drawable.smalldirectory);
+        dirButton.setImageDrawable(d);
 
+        //Set Directory button listeners
+        dirButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                StartScanQRDirIntent();
+            }
+        });
 
         dirButton.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                Toast.makeText(getApplicationContext(), "long hold success", Toast.LENGTH_LONG).show();
-                return false;
+                Toast.makeText(getApplicationContext(),
+                        "Default Directory: " + DEFAULT_DIR, Toast.LENGTH_LONG).show();
+                ResetDirectory();
+                return true;
             }
         });
-        */
+        /*<--sakiBomb-10*/
+
+        //return true to stop further click processing (i.e. prevent OnClickListener execution)
         return true;
     }
 
@@ -202,11 +218,8 @@ public class RenamePartsMain extends AppCompatActivity {
         } else if (id == R.id.scanBarcodeItem) {
             StartScanQRNameIntent();
             return true;
-        } else if (id == R.id.directoryButton) {
-            StartScanQRDirIntent();
-            return true;
         }
-
+        //Directory Button taken care by actual button   /*sakiBomb-10*/
          /*<--sakiBomb-08*/
         return super.onOptionsItemSelected(item);
     }
@@ -380,6 +393,13 @@ public class RenamePartsMain extends AppCompatActivity {
     }
 
     /*<--SakiBomb-04*/
+
+
+    public void ResetDirectory()
+    {
+        mDirectory.setText(DEFAULT_DIR);
+
+    }
 
 
     /*
