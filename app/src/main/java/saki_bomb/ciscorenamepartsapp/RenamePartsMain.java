@@ -11,6 +11,7 @@
 *   sakiBomb-08         15Oct15    New UI. Now using actionbar
 *   sakiBomb-09         15Oct15    Created new method to handle old button logic (i.e. pic, qr scan)
 *   sakiBomb-10         15Oct17    Handle directory changes
+*   sakiBomb-11         15Oct24    use new scanner SCANDIT for qr reading
 *
 **/
 
@@ -47,9 +48,11 @@ import java.io.FileOutputStream;
 
 public class RenamePartsMain extends AppCompatActivity {
 
-    static final int REQUEST_IMAGE_CAPTURE = 1;
+    static final int REQUEST_IMAGE_CAPTURE     = 1;
     static final int REQUEST_SCAN_QRDROID_NAME = 2;
-    static final int REQUEST_SCAN_QRDROID_DIR = 3;
+    static final int REQUEST_SCAN_QRDROID_DIR  = 3;
+    static final int REQUEST_SCAN_SCANDIT_NAME = 4;
+    static final int REQUEST_SCAN_SCANDIT_DIR  = 5;
 
     static final String DEFAULT_DIR = "/Cicon_Pics";
 
@@ -132,7 +135,19 @@ public class RenamePartsMain extends AppCompatActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        finish();
+    }
+
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        String scannedFileName;
+        String scannedDirName;
+
+        /*TODO: replace scanned result with method variables instead
+        *       of using new strings for each case
+        */
         if (resultCode == RESULT_OK) {
             switch (requestCode) {
                 case REQUEST_IMAGE_CAPTURE:
@@ -163,6 +178,20 @@ public class RenamePartsMain extends AppCompatActivity {
                         mDirectory.setText(DEFAULT_DIR + '/' + result_dir);
                     break;
                 /*<--sakiBomb-10*/
+                /*SakiBomb-11 -->*/
+                case REQUEST_SCAN_SCANDIT_NAME:
+                    scannedFileName = data.getExtras().getString("SCAN_RETURN");
+                    mRenameText.append(scannedFileName.replaceAll("\\s", "_"));
+                    break;
+                case REQUEST_SCAN_SCANDIT_DIR:
+                    scannedDirName = data.getExtras().getString("SCAN_RETURN");
+                    if (scannedDirName.charAt(0) == '/')
+                        mDirectory.setText(DEFAULT_DIR + scannedDirName);
+                    else
+                        mDirectory.setText(DEFAULT_DIR + '/' + scannedDirName);
+                    break;
+                /*<-- SakiBomb-11 */
+
                 default:
                     break;
             }
@@ -226,7 +255,7 @@ public class RenamePartsMain extends AppCompatActivity {
 
 
     private void galleryUpdate(Uri imageUri) {
-        /**
+        /*
          * Update file at imageUri
          */
         Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
@@ -262,9 +291,9 @@ public class RenamePartsMain extends AppCompatActivity {
     /*<--sakiBomb-10*/
 
     /*
-*   Looks through saved pictures in external memory to
-*   see if name is used. If so appends a counter to make file unique
-*/
+     *   Looks through saved pictures in external memory to
+     *   see if name is used. If so appends a counter to make file unique
+     */
     private File CreateValidFile(Picture pic) {
         //Names will be as follows xxxx_(c).jpg
 
@@ -294,21 +323,33 @@ public class RenamePartsMain extends AppCompatActivity {
     }
 
     private void StartScanQRNameIntent() {
-        /*//Set up intent using Zxing
+        /*Set up intent using Zxing
                 IntentIntegrator integrator = new IntentIntegrator(RenamePartsMain.this);
                 integrator.initiateScan();
                 */
 
         //Set up intent using QR Droid  sakiBomb-02
-        Intent QRDroidIntent = new Intent("la.droid.qr.scan");
-        startActivityForResult(QRDroidIntent, REQUEST_SCAN_QRDROID_NAME);
+        //Intent QRDroidIntent = new Intent("la.droid.qr.scan");
+        //startActivityForResult(QRDroidIntent, REQUEST_SCAN_QRDROID_NAME);
 
+        /*SakiBomb-11 -->*/
+        /* scan using new SCANDIT intent*/
+        Intent ScanditIntent = new Intent(RenamePartsMain.this, ScanditActivity.class);
+        startActivityForResult(ScanditIntent, REQUEST_SCAN_SCANDIT_NAME);
+            /*<--SakiBomb-11 */
     }
 
     /*sakiBomb-10-->*/
     private void StartScanQRDirIntent() {
-        Intent scanQrForDirectory = new Intent("la.droid.qr.scan");
-        startActivityForResult(scanQrForDirectory, REQUEST_SCAN_QRDROID_DIR);
+        //Intent scanQrForDirectory = new Intent("la.droid.qr.scan");
+        //startActivityForResult(scanQrForDirectory, REQUEST_SCAN_QRDROID_DIR);
+
+        /*SakiBomb-11 -->*/
+        //SCAN directory using SCANDIT
+        Intent ScanditIntent = new Intent(RenamePartsMain.this, ScanditActivity.class);
+        startActivityForResult(ScanditIntent, REQUEST_SCAN_SCANDIT_DIR);
+        /*<-- SakiBomb-11 */
+
     }
     /*<--sakiBomb-10*/
 

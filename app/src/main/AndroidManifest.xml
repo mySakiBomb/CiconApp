@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="saki_bomb.ciscorenamepartsapp"
-    android:versionCode="5"
-    android:versionName="1.04">
+    android:versionCode="7"
+    android:versionName="1.06">
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera"
         android:required="true" />
     <uses-sdk
@@ -28,6 +29,9 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+        <activity android:name=".ScanditActivity"
+            android:label="@string/scandit_activity">
         </activity>
     </application>
 
