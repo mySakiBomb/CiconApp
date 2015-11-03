@@ -12,6 +12,7 @@
 *   sakiBomb-09         15Oct15    Created new method to handle old button logic (i.e. pic, qr scan)
 *   sakiBomb-10         15Oct17    Handle directory changes
 *   sakiBomb-11         15Oct24    use new scanner SCANDIT for qr reading
+*   sakiBomb-12         15Oct30    incorporate inigma scanner (trial version)
 *
 **/
 
@@ -37,6 +38,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+//zxing
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
@@ -44,6 +46,8 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+
+import saki_bomb.ciscorenamepartsapp.InigmaScanner.InigmaScanActivity;
 
 
 public class RenamePartsMain extends AppCompatActivity {
@@ -53,6 +57,8 @@ public class RenamePartsMain extends AppCompatActivity {
     static final int REQUEST_SCAN_QRDROID_DIR  = 3;
     static final int REQUEST_SCAN_SCANDIT_NAME = 4;
     static final int REQUEST_SCAN_SCANDIT_DIR  = 5;
+    static final int REQUEST_SCAN_INIGMA_NAME  = 6;
+    static final int REQUEST_SCAN_INIGMA_DIR   = 7;
 
     static final String DEFAULT_DIR = "/Cicon_Pics";
 
@@ -190,7 +196,20 @@ public class RenamePartsMain extends AppCompatActivity {
                     else
                         mDirectory.setText(DEFAULT_DIR + '/' + scannedDirName);
                     break;
-                /*<-- SakiBomb-11 */
+                /*<-- SakiBomb-11 */  /*SakiBomb-12-->*/
+                case REQUEST_SCAN_INIGMA_NAME:
+                    scannedFileName = data.getExtras().getString("SCAN_RETURN");
+                    mRenameText.append(scannedFileName);
+                    break;
+                case REQUEST_SCAN_INIGMA_DIR:
+                    scannedDirName = data.getExtras().getString("SCAN_RETURN");
+                    if (scannedDirName.charAt(0) == '/')
+                        mDirectory.setText(DEFAULT_DIR + scannedDirName);
+                    else
+                        mDirectory.setText(DEFAULT_DIR + '/' + scannedDirName);
+                    break;
+
+                /*<--SakiBomb-12*/
 
                 default:
                     break;
@@ -334,9 +353,14 @@ public class RenamePartsMain extends AppCompatActivity {
 
         /*SakiBomb-11 -->*/
         /* scan using new SCANDIT intent*/
-        Intent ScanditIntent = new Intent(RenamePartsMain.this, ScanditActivity.class);
-        startActivityForResult(ScanditIntent, REQUEST_SCAN_SCANDIT_NAME);
+        //Intent ScanditIntent = new Intent(RenamePartsMain.this, ScanditActivity.class);
+        //startActivityForResult(ScanditIntent, REQUEST_SCAN_SCANDIT_NAME);
             /*<--SakiBomb-11 */
+
+        /*SakiBomb-12-->*/
+        Intent InigmaIntent = new Intent(this, InigmaScanActivity.class);
+        startActivityForResult(InigmaIntent, REQUEST_SCAN_INIGMA_NAME);
+            /*<--SakiBomb-12*/
     }
 
     /*sakiBomb-10-->*/
@@ -346,9 +370,15 @@ public class RenamePartsMain extends AppCompatActivity {
 
         /*SakiBomb-11 -->*/
         //SCAN directory using SCANDIT
-        Intent ScanditIntent = new Intent(RenamePartsMain.this, ScanditActivity.class);
-        startActivityForResult(ScanditIntent, REQUEST_SCAN_SCANDIT_DIR);
+        //Intent ScanditIntent = new Intent(RenamePartsMain.this, ScanditActivity.class);
+        //startActivityForResult(ScanditIntent, REQUEST_SCAN_SCANDIT_DIR);
         /*<-- SakiBomb-11 */
+
+        /*SakiBomb-12--> */
+        Intent InigmaIntent = new Intent(this, InigmaScanActivity.class);
+        startActivityForResult(InigmaIntent, REQUEST_SCAN_INIGMA_DIR);
+            /*<-- SakiBomb-12 */
+
 
     }
     /*<--sakiBomb-10*/

@@ -6,6 +6,8 @@
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.INTERNET" />          --inigma scanner
+    <uses-feature android:name="android.hardware.camera.autofocus" />       --ingima scanner
     <uses-feature android:name="android.hardware.camera"
         android:required="true" />
     <uses-sdk
@@ -33,6 +35,10 @@
         <activity android:name=".ScanditActivity"
             android:label="@string/scandit_activity">
         </activity>
+        <activity android:name=".InigmaScanner.InigmaScanActivity"
+            android:label="@string/inigma_activity">
+        </activity>
+
     </application>
 
 </manifest>
