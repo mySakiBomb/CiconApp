@@ -1,6 +1,13 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools" tools:context=".RenamePartsMain">
+
+    <item android:id="@+id/directoryButton"
+        android:title="@string/action_dir"
+        android:icon="@drawable/directory"
+        app:showAsAction="always"
+        app:actionViewClass="android.widget.ImageButton"
+        />
     <item
         android:id="@+id/takePicItem"
         android:title="@string/action_takePic"
@@ -13,12 +20,7 @@
         android:icon="@drawable/qrscan"
         app:showAsAction="always"/>
 
-    <item android:id="@+id/directoryButton"
-        android:title="@string/action_dir"
-        android:icon="@drawable/directory"
-        app:showAsAction="always"
-        app:actionViewClass="android.widget.ImageButton"
-        />
+
 
 
 </menu>

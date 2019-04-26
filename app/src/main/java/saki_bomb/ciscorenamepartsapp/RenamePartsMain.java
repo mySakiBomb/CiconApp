@@ -13,12 +13,19 @@
 *   sakiBomb-10         15Oct17    Handle directory changes
 *   sakiBomb-11         15Oct24    use new scanner SCANDIT for qr reading
 *   sakiBomb-12         15Oct30    incorporate inigma scanner (trial version)
+*   sakiBomb-13         15Nov20    Add setup phase to acquire inigma licensing
+*   sakiBomb-14         15Dec01    Remove calcCameraSize() to prevent lens open-close-open
+*   sakiBomb-15         16Feb17    Save pics to memory card instead of default external storage
+*   sakiBomb-16         16Feb17    remove \r\n from directory names
+*   sakiBomb-17         16Mar04    add gallery app intent
+
 *
 **/
 
 
 package saki_bomb.ciscorenamepartsapp;
 
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
@@ -41,11 +48,14 @@ import android.widget.Toast;
 //zxing
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
+import com.threegvision.products.inigma_sdk_pro.sdk_pro.SDK;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import saki_bomb.ciscorenamepartsapp.InigmaScanner.InigmaScanActivity;
 
@@ -59,8 +69,10 @@ public class RenamePartsMain extends AppCompatActivity {
     static final int REQUEST_SCAN_SCANDIT_DIR  = 5;
     static final int REQUEST_SCAN_INIGMA_NAME  = 6;
     static final int REQUEST_SCAN_INIGMA_DIR   = 7;
+    static final int REQUEST_GALLERY           = 8; /*sakiBomb-17*/
 
     static final String DEFAULT_DIR = "/Cicon_Pics";
+    static final String DEFAULT_EXT_DIR = "/storage/extSdCard";
 
     //Main.xml parts
     ImageView mPicSample;
@@ -88,13 +100,23 @@ public class RenamePartsMain extends AppCompatActivity {
         ab.setDisplayShowHomeEnabled(true);
         /*<--sakiBomb-08*/
 
+        /*Setup InigmaScannerActivity Licensing*/
+        /*SakiBomb-13 -->*/
+        Intent InigmaSetupIntent = new Intent(this, InigmaScanActivity.class);
+        InigmaSetupIntent.putExtra("isSetup", true);
+        startActivity(InigmaSetupIntent);
+        /*<-- SakiBomb-13 */
+
         CreateDefaultDirectory();
 
         // Create a storage directory for the images
         // TODO: To be safe(er), you should check that the SDCard is mounted
         // using Environment.getExternalStorageState() before doing this
-        mTmpPicture = new Picture(Environment.getExternalStoragePublicDirectory(
+        //TODO: use getExternalStorageDirectory to save to SD card
+        /*mTmpPicture = new Picture(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES) + "/Cicon_Pics", "tmpImage");  //used to save initial picture
+        */
+        mTmpPicture= new Picture(DEFAULT_EXT_DIR, "tmpExtImage");            //sakiBomb-15
         mPicture = new Picture();
 
 
@@ -126,6 +148,18 @@ public class RenamePartsMain extends AppCompatActivity {
             }
         });
 
+        /* sakiBomb-17 -->*/
+        final Button gallery = (Button) findViewById(R.id.gallery_button);
+        gallery.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent galleryIntent = new Intent(
+                        Intent.ACTION_VIEW,
+                        android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                startActivity(galleryIntent);
+            }
+        });
+        /* <-- sakiBomb-17 */
 
     }
 
@@ -208,7 +242,6 @@ public class RenamePartsMain extends AppCompatActivity {
                     else
                         mDirectory.setText(DEFAULT_DIR + '/' + scannedDirName);
                     break;
-
                 /*<--SakiBomb-12*/
 
                 default:
@@ -284,25 +317,29 @@ public class RenamePartsMain extends AppCompatActivity {
 
 
     private void CreateDefaultDirectory() {
-        //File newDir = new File(mTmpPicture.getPath());
-        File newDir = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), "Cicon_pics");
+        File newExtDir = new File(DEFAULT_EXT_DIR);           //sakiBomb-15
 
-        if (!newDir.exists())
-            if (!newDir.mkdirs()) {
+        /*sakiBomb-15 -->*/
+        if (!newExtDir.exists())
+            if (!newExtDir.mkdirs()) {
                 Log.d("CameraTestIntent", "failed to create directory");
             }
+        /*<--sakiBomb-15*/
     }
 
 
     /*creates given directory if it does not exist*/
     /*sakiBomb-10-->*/
-    private void CreateDirectory(String directory_path)
+    private void CreateDirectory(Picture finalPic)
     {
-        File newDir = new File(directory_path);
+        /*sakiBomb-16 remove \r characters from file names -->*/
+        finalPic.setPath(finalPic.getPath().replace('\r', '_'));
+        finalPic.setPath(finalPic.getPath().replace('\n', '_'));
+        File newDir = new File(finalPic.getPath());
+        /*<-- sakiBomb-16*/
 
         if(!newDir.exists())
-            if(newDir.mkdirs())
+            if(!newDir.mkdirs())
             {
                 Log.d("CreateNewDirectory", "failed to create new directory");
             }
@@ -331,6 +368,11 @@ public class RenamePartsMain extends AppCompatActivity {
 
     /*sakiBomb-09 -->*/
     private void StartTakePicIntent() {
+        /*sakiBomb-15 -->*/
+        //only allow user to take pic if an sd card is inserted.
+        //TODO: check for sd card
+        /*<--sakiBomb-15*/
+
         //set up camera intent
         Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
@@ -400,10 +442,11 @@ public class RenamePartsMain extends AppCompatActivity {
 
 
         mPicture.setName(newName); //sakiBomb-03
-        mPicture.setPath(getExternalStoragePath() + newDir);    /*sakiBomb-10*/
+        //mPicture.setPath(getExternalStoragePath() + newDir);    /*sakiBomb-10*/
+        mPicture.setPath(DEFAULT_EXT_DIR + newDir);               /*sakiBomb-15*/
 
         //make sure directory for final image location is created
-        CreateDirectory(mPicture.getPath());
+        CreateDirectory(mPicture);
 
         //file to store final picture in
         File finalFile = CreateValidFile(mPicture);
